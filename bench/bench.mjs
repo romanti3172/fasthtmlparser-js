@@ -4,7 +4,7 @@
 //   npm install && npm run bench          (in this folder; build the library first: npm run build in ..)
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
-import * as fh from 'fasthtmlparser';
+import * as fh from 'z3l-fasthtmlparser';
 import * as cheerio from 'cheerio';
 import { parseDocument } from 'htmlparser2';
 import { parse as parse5 } from 'parse5';

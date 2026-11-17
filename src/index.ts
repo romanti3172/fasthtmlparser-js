@@ -1,12 +1,12 @@
 /**
- * fasthtmlparser: a fast HTML / XML parser for scraping, with XPath 1.0 and CSS selectors.
+ * z3l-fasthtmlparser: a fast HTML / XML parser for scraping, with XPath 1.0 and CSS selectors.
  * A JavaScript port of z3l.FastHtmlParser (.NET).
  *
  * A document is a flat list of tags in document order; each tag holds only positions in the source.
  * Text, attributes and entities are read lazily, when they are asked for.
  *
  * @example
- * import { parse, Tag } from 'fasthtmlparser';
+ * import { parse, Tag } from 'z3l-fasthtmlparser';
  * const doc = parse(html, 'https://example.com/catalog/');
  * for (const pod of doc.css('article.product_pod')) {
  *   const title = pod.cssFirst('h3 a')?.attr('title');

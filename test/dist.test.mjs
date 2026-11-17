@@ -13,5 +13,5 @@ function check(lib) {
   assert.equal(lib.XPathQuery.compile('count(//li)').value(doc), '2');
 }
 
-test('ES module', async () => check(await import('fasthtmlparser')));
-test('CommonJS', () => check(createRequire(import.meta.url)('fasthtmlparser')));
+test('ES module', async () => check(await import('z3l-fasthtmlparser')));
+test('CommonJS', () => check(createRequire(import.meta.url)('z3l-fasthtmlparser')));

@@ -1,7 +1,7 @@
-# fasthtmlparser
+# z3l-fasthtmlparser
 
 [![CI](https://github.com/romanti3172/fasthtmlparser-js/actions/workflows/ci.yml/badge.svg)](https://github.com/romanti3172/fasthtmlparser-js/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/fasthtmlparser)](https://www.npmjs.com/package/fasthtmlparser)
+[![npm](https://img.shields.io/npm/v/z3l-fasthtmlparser)](https://www.npmjs.com/package/z3l-fasthtmlparser)
 
 JavaScript / TypeScript port of [z3l.FastHtmlParser](https://github.com/romanti3172/z3l.FastHtmlParser): a fast
 HTML / XML parser for scraping, with **XPath 1.0** and **CSS selectors**. It is built for extracting data, not for
@@ -13,14 +13,14 @@ The whole API is ported: the parser, attributes, HTML5 entities, visible text an
 [Go port](https://github.com/romanti3172/fasthtmlparser).
 
 ```
-npm install fasthtmlparser
+npm install z3l-fasthtmlparser
 ```
 
 No dependencies. ES modules and CommonJS, TypeScript types included. Node 18 or later, and any modern browser or
 runtime (Deno, Bun).
 
 ```ts
-import { parse, by, Tag, Attr } from 'fasthtmlparser';
+import { parse, by, Tag, Attr } from 'z3l-fasthtmlparser';
 
 const doc = parse(page, 'https://example.com/catalog/'); // or parse(page); bytes are read as UTF-8
 
@@ -40,7 +40,7 @@ doc.xpathValue("//dt[.='Price']/following-sibling::dd[1]");
 doc.xpathValue('count(//table//tr)'); // "12"
 
 // compile once, reuse on any number of pages
-import { XPathQuery, CssQuery } from 'fasthtmlparser';
+import { XPathQuery, CssQuery } from 'z3l-fasthtmlparser';
 const titles = XPathQuery.compile('//article//h3/a/@title');
 titles.values(doc);
 
