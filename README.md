@@ -153,6 +153,9 @@ npm run build       # dist/esm and dist/cjs
 npm run gen         # the tag, attribute and entity tables from the C# sources, and the shortcuts
 ```
 
+Releases: bump `version` in `package.json`, commit, and push a tag `v<version>`. The `Publish` workflow checks
+everything again and publishes to npm with trusted publishing (no stored token) and a provenance statement.
+
 - `src/parse.ts`: the scanner and the HTML5 optional-end-tag rules (port of `ParsingCore.cs`)
 - `src/attr.ts`, `decode.ts`, `text.ts`, `textlines.ts`: attributes, character references, visible text, text with line breaks
 - `src/document.ts`: `HtmlDocument`, `HtmlNode`, `Query`, search, navigation and the generated shortcuts; `links.ts`: href / src
