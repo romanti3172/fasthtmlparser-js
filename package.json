@@ -1,12 +1,25 @@
 {
   "name": "z3l-fasthtmlparser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Fast HTML / XML parser for scraping with XPath 1.0 and CSS selectors: a flat tag list, lazy text and attributes, no dependencies. A port of z3l.FastHtmlParser.",
-  "keywords": ["html", "parser", "xpath", "css", "selector", "scraping", "scraper", "html-parser", "crawler"],
+  "keywords": [
+    "html",
+    "parser",
+    "xpath",
+    "css",
+    "selector",
+    "scraping",
+    "scraper",
+    "html-parser",
+    "crawler"
+  ],
   "license": "SEE LICENSE IN LICENSE.md",
   "author": "z3l",
   "homepage": "https://github.com/romanti3172/fasthtmlparser-js#readme",
-  "repository": { "type": "git", "url": "git+https://github.com/romanti3172/fasthtmlparser-js.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/romanti3172/fasthtmlparser-js.git"
+  },
   "bugs": "https://github.com/romanti3172/fasthtmlparser-js/issues",
   "type": "module",
   "main": "./dist/cjs/index.js",
@@ -14,14 +27,26 @@
   "types": "./dist/esm/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
-      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "LICENSE.md", "README.md"],
+  "files": [
+    "dist",
+    "LICENSE.md",
+    "README.md"
+  ],
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "node tools/build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
