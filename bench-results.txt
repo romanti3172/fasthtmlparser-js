@@ -1,0 +1,30 @@
+every scraper returns the same records
+
+Node v26.13.1; median time per call
+
+Parse a page:
+
+| Page | fasthtmlparser | htmlparser2 | node-html-parser | parse5 | cheerio (parse5) | linkedom |
+|---|---:|---:|---:|---:|---:|---:|
+| quotes, 11 KB | 69 μs | 257 μs | 297 μs | 439 μs | 637 μs | 1.26 ms |
+| laptops, 38 KB | 197 μs | 902 μs | 835 μs | 1.50 ms | 1.71 ms | 3.44 ms |
+| books, 51 KB | 205 μs | 865 μs | 922 μs | 1.89 ms | 1.87 ms | 2.73 ms |
+| books x10, 510 KB | 2.68 ms | 10.55 ms | 10.05 ms | 20.74 ms | 27.26 ms | 46.10 ms |
+| books without </li> </p> | 237 μs | 974 μs | 863 μs | 1.94 ms | 2.86 ms | 2.67 ms |
+
+Scrape a page (parse + extract the records):
+
+| Task | Time |
+|---|---:|
+| books, fasthtmlparser find | 275 μs |
+| books, fasthtmlparser CSS | 282 μs |
+| books, fasthtmlparser XPath | 307 μs |
+| books, cheerio | 2.81 ms |
+| books, node-html-parser | 1.33 ms |
+| books, linkedom | 3.41 ms |
+| books, jsdom XPath | 42.67 ms |
+| quotes, fasthtmlparser find | 110 μs |
+| quotes, fasthtmlparser CSS | 100 μs |
+| quotes, cheerio | 1.11 ms |
+| quotes, node-html-parser | 532 μs |
+| quotes, linkedom | 1.48 ms |

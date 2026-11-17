@@ -1,0 +1,37 @@
+{
+  "name": "fasthtmlparser",
+  "version": "0.1.0",
+  "description": "Fast HTML / XML parser for scraping with XPath 1.0 and CSS selectors: a flat tag list, lazy text and attributes, no dependencies. A port of z3l.FastHtmlParser.",
+  "keywords": ["html", "parser", "xpath", "css", "selector", "scraping", "scraper", "html-parser", "crawler"],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "author": "z3l",
+  "homepage": "https://github.com/romanti3172/fasthtmlparser-js#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/romanti3172/fasthtmlparser-js.git" },
+  "bugs": "https://github.com/romanti3172/fasthtmlparser-js/issues",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/esm/index.d.ts", "default": "./dist/esm/index.js" },
+      "require": { "types": "./dist/cjs/index.d.ts", "default": "./dist/cjs/index.js" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "LICENSE.md", "README.md"],
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/*.test.ts",
+    "test:dist": "node --test test/dist.test.mjs",
+    "gen": "node tools/gen.mjs ../z3l.FastHtmlParser/src/z3l.FastHtmlParser && node tools/gen-shortcuts.mjs",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm run test:dist"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3"
+  }
+}
