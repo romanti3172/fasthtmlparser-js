@@ -13,7 +13,7 @@
     "html-parser",
     "crawler"
   ],
-  "license": "SEE LICENSE IN LICENSE.md",
+  "license": "LicenseRef-z3l-FastHtmlParser",
   "author": "z3l",
   "homepage": "https://github.com/romanti3172/fasthtmlparser-js#readme",
   "repository": {
