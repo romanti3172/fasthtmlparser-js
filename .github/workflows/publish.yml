@@ -53,4 +53,4 @@ jobs:
 
       # prepublishOnly runs the type check, the tests, the build and the test of the built package first
       - name: Publish
-        run: npm publish --access public --tag "$DIST_TAG"
+        run: npm publish --access public --tag "$DIST_TAG" --loglevel verbose
