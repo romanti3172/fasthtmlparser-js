@@ -3,7 +3,7 @@
 
 import { equalFold, isUnicodeSpace, trimSpace } from './chars.ts';
 import { AttrScanner, attrEquals } from './attr.ts';
-import { decode, normalizeNewlines } from './decode.ts';
+import { decode, needsDecoding, normalizeNewlines } from './decode.ts';
 import { Tag } from './names.ts';
 import { rawTextEnds } from './parse.ts';
 import { clearTags } from './text.ts';
@@ -785,6 +785,62 @@ class AttributeEqualsExpr implements XExpr {
     // '!=' is true when the attribute exists and differs (a missing attribute is an empty node-set)
     const raw = attributeOf(c.node, this.name);
     return raw !== null && attrEquals(raw, this.value) !== this.negate;
+  }
+}
+
+/**
+ * contains/starts-with/ends-with(concat('prefix', @name, 'suffix'), 'needle') (prefix and suffix may be empty):
+ * tested on the attribute value in place, without a node-set and a concatenated string for every element.
+ */
+class AttributeTestExpr implements XExpr {
+  readonly type = XType.Boolean;
+  readonly fn: string;
+  readonly prefix: string;
+  readonly name: string;
+  readonly suffix: string;
+  readonly needle: string;
+  constructor(fn: string, prefix: string, name: string, suffix: string, needle: string) {
+    this.fn = fn;
+    this.prefix = prefix;
+    this.name = name;
+    this.suffix = suffix;
+    this.needle = needle;
+  }
+  usesPosition() {
+    return false;
+  }
+  eval(c: Ctx) {
+    return this.evalBool(c);
+  }
+  evalBool(c: Ctx): boolean {
+    const raw = attributeOf(c.node, this.name);
+    // a missing attribute is an empty node-set, whose string-value is ""
+    const value = raw === null ? '' : needsDecoding(raw) ? decode(raw, true) : raw;
+    const { prefix, suffix, needle } = this;
+    const length = prefix.length + value.length + suffix.length;
+    const n = needle.length;
+    if (n > length) return false;
+    if (this.fn === 'starts-with') return this.matchesAt(value, 0);
+    if (this.fn === 'ends-with') return this.matchesAt(value, length - n);
+    // inside the value (a native search), or overlapping the prefix or the suffix: a few positions
+    if (n <= value.length && value.includes(needle)) return true;
+    const p = prefix.length;
+    for (let at = 0; at < p && at <= length - n; at++) if (this.matchesAt(value, at)) return true;
+    for (let at = Math.max(p, p + value.length - n + 1); at <= length - n; at++) if (this.matchesAt(value, at)) return true;
+    return false;
+  }
+  /** Whether the needle is at `at` in prefix + value + suffix. */
+  private matchesAt(value: string, at: number): boolean {
+    const { prefix, suffix, needle } = this;
+    for (let k = 0; k < needle.length; k++) {
+      let i = at + k;
+      let ch: number;
+      if (i < prefix.length) ch = prefix.charCodeAt(i);
+      else if ((i -= prefix.length) < value.length) ch = value.charCodeAt(i);
+      else ch = suffix.charCodeAt(i - value.length);
+      if (ch !== needle.charCodeAt(k)) return false;
+    }
+    return true;
   }
 }
 
@@ -1737,8 +1793,29 @@ class XPathCompiler {
     if (['count', 'sum', 'name', 'local-name'].includes(t.text) && args.length > 0 && args[0].type !== XType.NodeSet) {
       this.failAt(`${t.text}() needs a node-set argument`, t.position);
     }
-    return new FunctionExpr(t.text, args, info.type);
+    return makeAttributeTest(t.text, args, info.type);
   }
+}
+
+/**
+ * contains(@a, 'x'), starts-with(...), ends-with(...), also with the attribute wrapped in literals
+ * (contains(concat(' ', @class, ' '), ' x '), the usual class test), are evaluated on the attribute in place.
+ */
+function makeAttributeTest(fn: string, args: XExpr[], type: number): XExpr {
+  const needle = args[1];
+  if ((fn === 'contains' || fn === 'starts-with' || fn === 'ends-with') && needle instanceof LiteralExpr) {
+    const arg = args[0];
+    const name = attributeName(arg);
+    if (name !== null) return new AttributeTestExpr(fn, '', name, '', needle.value);
+    if (arg instanceof FunctionExpr && arg.fn === 'concat' && arg.args.length === 3) {
+      const [prefix, attribute, suffix] = arg.args;
+      const inner = attributeName(attribute);
+      if (inner !== null && prefix instanceof LiteralExpr && suffix instanceof LiteralExpr) {
+        return new AttributeTestExpr(fn, prefix.value, inner, suffix.value, needle.value);
+      }
+    }
+  }
+  return new FunctionExpr(fn, args, type);
 }
 
 function canStartStep(t: Token): boolean {
