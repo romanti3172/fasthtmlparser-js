@@ -473,7 +473,10 @@ class ParseState {
     this.nodes[index] = new HtmlNode(this.doc, index, parent, key, custom, tagStart - 1, gt, gt + 1, depth);
 
     // Void elements (<br>, <img>, <meta>, ...) and declarations never contain anything.
-    const isVoid = !this.isXml && key >= 0 && voidTags[key] === 1;
+    // Neither does markup named "!..." or "?..." (<!doctype>, <?xml ...?>, <?php ...?>, <![if IE]>), in HTML and in
+    // XML alike: a bogus comment in a browser, a declaration or processing instruction in XML. The name starts with an
+    // ASCII letter, '!' or '?' (isMarkupStart), and '!' and '?' (63) sort before the letters: one compare.
+    const isVoid = src.charCodeAt(tagStart) <= 63 || (!this.isXml && key >= 0 && voidTags[key] === 1);
     let selfClosing = isVoid;
     if (!selfClosing) {
       let e = gt;
