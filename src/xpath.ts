@@ -1685,7 +1685,8 @@ class XPathCompiler {
       absolute = true;
       steps = this.parseRelativeSteps(steps, true);
     } else {
-      if (!canStartStep(this.peek(0))) this.fail('unexpected ' + this.describe(this.peek(0)));
+      if (!canStartStep(this.peek(0)))
+        this.fail(this.peek(0).kind === T.End ? 'unexpected end of the expression' : 'unexpected ' + this.describe(this.peek(0)));
       steps = this.parseRelativeSteps(steps, false);
     }
     return new PathExpr(null, absolute, optimize(steps));

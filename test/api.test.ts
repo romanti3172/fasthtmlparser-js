@@ -129,6 +129,7 @@ test('compiled queries and errors', () => {
   assert.equal(doc.xpathValue('1000000 * 1000000 * 1000000 * 1000'), '1000000000000000000000');
   assert.equal(doc.xpathValue('1 div 10000000'), '0.0000001');
   assert.throws(() => XPathQuery.compile('//li['), XPathError);
+  assert.throws(() => XPathQuery.compile('//li['), /unexpected end of the expression/);
   assert.throws(() => doc.xpath('count(//li)'), TypeError);
   assert.throws(() => CssQuery.compile('li::before'), CssSelectorError);
   assert.throws(() => doc.css('li:unknown'), CssSelectorError);
