@@ -7,7 +7,7 @@ import { AttrScanner, attrEquals, attrRaw, attrStartsWith, attrValue, hasClass }
 import { decode } from './decode.ts';
 import { Tag, tagNames } from './names.ts';
 import { lookupTag, parseTags, rawTextEnds } from './parse.ts';
-import { clearTags, isText } from './text.ts';
+import { clearTags, hasPreTag, isText, needsCollapse } from './text.ts';
 import { clearTagsLineBreaks } from './textlines.ts';
 import { absoluteUrl, afterScheme, correctLink, type Url } from './links.ts';
 import { cachedCss, type CssTree } from './css.ts';
@@ -38,6 +38,19 @@ export class HtmlDocument {
   readonly base: Url | null;
   /** @internal sibling links and positions, built by the first selector that needs them */
   cssTree: CssTree | null = null;
+  /** @internal 0: not looked up, 1: no pre, listing or plaintext in the page, 2: there is one (see hasPre) */
+  preState = 0;
+
+  /**
+   * @internal Whether the page has a pre, listing or plaintext, looked up once: most pages have none, and then
+   * text() does not look for one around each tag.
+   */
+  hasPre(): boolean {
+    if (this.preState === 0) {
+      this.preState = this.nodes.some(n => n.key === Tag.Pre || n.key === Tag.Listing || n.key === Tag.Plaintext) ? 2 : 1;
+    }
+    return this.preState === 2;
+  }
 
   constructor(source: string, url = '') {
     this.source = source;
@@ -283,16 +296,43 @@ export class HtmlNode {
   }
 
   /**
-   * The visible text with entities decoded. With child tags: tags, comments and the content of script, style,
-   * noscript, template, noframes, noembed removed, whitespace collapsed; without: the inner text as is (trimmed).
+   * The visible text in one line with entities decoded, as jsoup's `text()`: tags, comments and the content of script,
+   * style, noscript, template, noframes, noembed removed; `<br>`, block elements and table cells separate words
+   * ("a<br>b": "a b"), inline tags do not ("a<b>b</b>": "ab"); whitespace, line breaks included, collapsed to one
+   * space and trimmed. Inside `<pre>` whitespace is kept; script, style, textarea, title, ... are their content as
+   * written.
    */
   text(): string {
     const body = this.body();
-    // No child tags and no '<' at all: the body is the text, except in script, style, textarea, title, ...
-    if (!this.hasChildren() && (body.indexOf('<') < 0 || (this.key >= 0 && rawTextEnds[this.key] !== ''))) {
-      return decode(body, false);
+    const leaf = !this.hasChildren();
+    // script, style, textarea, title, ... without child tags: their content is text as written
+    if (leaf && this.key >= 0 && rawTextEnds[this.key] !== '') return decode(body, false);
+    // no child tags, no '<' and no whitespace to collapse: the body is the text
+    const plain = leaf && body.indexOf('<') < 0;
+    if (plain && !needsCollapse(body)) return decode(body, false);
+    // <pre> and what is in it keep their whitespace (looked up only when there is whitespace to keep)
+    const inPre = this.inPre();
+    if (plain && inPre) return decode(body, false);
+    return clearTags(body, inPre);
+  }
+
+  /** @internal Whether the tag is pre, listing or plaintext, or inside one. */
+  inPre(): boolean {
+    if (!this.document.hasPre()) return false;
+    for (let t: HtmlNode | null = this; t !== null; t = t.parent()) {
+      if (t.key === Tag.Pre || t.key === Tag.Listing || t.key === Tag.Plaintext) return true;
     }
-    return clearTags(body);
+    return false;
+  }
+
+  /** @internal Whether text() equals expected, without building the text when it can be compared on the fly. */
+  isTextValue(expected: string): boolean {
+    const body = this.body();
+    // <pre> keeps its whitespace in text(), raw text is as written: compare with text() itself (rare, the slow way)
+    if ((this.key >= 0 && rawTextEnds[this.key] !== '') || (this.document.hasPre() && (hasPreTag(body) || this.inPre()))) {
+      return body !== '' && expected !== '' && this.text() === expected;
+    }
+    return isText(body, expected, () => this.text());
   }
 
   /**
@@ -928,7 +968,7 @@ export class Query {
     if (has & hasBody && n.body() !== v[slotBody]) return false;
     if (has & hasBodyStartsWith && !n.body().startsWith(v[slotBodyStartsWith])) return false;
     // the text last: it is the most expensive check
-    if (has & hasTextBit && !isText(n.body(), v[slotText], () => n.text())) return false;
+    if (has & hasTextBit && !n.isTextValue(v[slotText]!)) return false;
     if (has & hasTextStartsWith && !n.text().startsWith(v[slotTextStartsWith])) return false;
     return true;
   }

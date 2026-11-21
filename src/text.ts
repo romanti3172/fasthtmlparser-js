@@ -2,7 +2,8 @@
 
 import { equalFold, isSpace, isUnicodeSpace, startsWithAt } from './chars.ts';
 import { decode } from './decode.ts';
-import { findCommentEnd, findRawTextEnd, isMarkupStart } from './parse.ts';
+import { findCommentEnd, findRawTextEnd, isMarkupStart, lookupTagAt } from './parse.ts';
+import { separatesWordsTag } from './textlines.ts';
 
 /**
  * s[i] is '<'. Returns the index of the last char of what is not text there: a comment, a tag,
@@ -50,10 +51,71 @@ function invisibleContentEnd(s: string, from: number, to: number): string {
   return end;
 }
 
-/** Removes tags, comments and invisible content, collapses whitespace runs into one ' ' and trims. */
-function stripTags(s: string): string {
+function isAsciiLetterOrDigit(c: number): boolean {
+  return (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57);
+}
+
+/**
+ * Whether the markup at s[i] ('<') is a tag that separates words in the one-line text, as in jsoup's `text()`:
+ * `<br>`, a block element or a table cell, opening or closing. Comments, declarations, inline and unknown tags do not.
+ */
+export function separatesWords(s: string, i: number): boolean {
+  let start = i + 1;
+  if (start < s.length && s.charCodeAt(start) === 47) start++;
+  let end = start;
+  while (end < s.length && isAsciiLetterOrDigit(s.charCodeAt(end))) end++;
+  if (end === start) return false;
+  const tag = lookupTagAt(s, start, end);
+  return tag >= 0 && separatesWordsTag(tag);
+}
+
+/** +1 for an opening pre, listing or plaintext at s[i], -1 for a closing one, 0 otherwise: their text keeps its whitespace. */
+function preTag(s: string, i: number): number {
+  let start = i + 1;
+  let sign = 1;
+  if (start < s.length && s.charCodeAt(start) === 47) {
+    start++;
+    sign = -1;
+  }
+  const first = s.charCodeAt(start) | 0x20;
+  if (start >= s.length || (first !== 112 && first !== 108)) return 0;
+  let end = start;
+  while (end < s.length && /[a-zA-Z]/.test(s[end]!)) end++;
+  const name = s.slice(start, end).toLowerCase();
+  return name === 'pre' || name === 'listing' || name === 'plaintext' ? sign : 0;
+}
+
+/** Whether trimmed text has whitespace to collapse: a line break, tab or other space than ' ', or two spaces in a row. */
+export function needsCollapse(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 32) {
+      if (i + 1 < s.length && isUnicodeSpace(s.charCodeAt(i + 1))) return true;
+    } else if (isUnicodeSpace(c)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Whether the HTML has a "<pre" (any case). */
+export function hasPreTag(s: string): boolean {
+  for (let i = s.indexOf('<'); i >= 0; i = s.indexOf('<', i + 1)) {
+    if (s.slice(i + 1, i + 4).toLowerCase() === 'pre') return true;
+  }
+  return false;
+}
+
+/**
+ * Removes tags, comments and invisible content, collapses whitespace runs into one ' ' and trims: the visible text in
+ * one line, as jsoup's `text()`. `<br>`, block elements and table cells separate words ("a<br>b", a row of cells:
+ * "a b"), inline tags do not ("a<b>b</b>": "ab"). Inside `<pre>` (inPre: the text itself is in one) whitespace is
+ * kept as written.
+ */
+function stripTags(s: string, inPre: boolean): string {
   let out = '';
   let pendingSpace = false;
+  let preDepth = inPre ? 1 : 0;
   let run = -1; // start of the current run of text chars
   let i = 0;
   const n = s.length;
@@ -65,11 +127,16 @@ function stripTags(s: string): string {
         run = -1;
       }
       const last = skipMarkup(s, i);
-      if (last < 0) return out;
+      if (last < 0) break;
+      if (!inPre) preDepth = Math.max(0, preDepth + preTag(s, i));
+      // only after a word: next to whitespace the tag changes nothing (and costs no lookup)
+      if (out.length > 0 && !pendingSpace && !isUnicodeSpace(out.charCodeAt(out.length - 1)) && separatesWords(s, i)) {
+        pendingSpace = true;
+      }
       i = last + 1;
       continue;
     }
-    if (isUnicodeSpace(c)) {
+    if (isUnicodeSpace(c) && preDepth === 0) {
       if (run >= 0) {
         out += s.slice(run, i);
         run = -1;
@@ -79,6 +146,11 @@ function stripTags(s: string): string {
       continue;
     }
     if (run < 0) {
+      if (out.length === 0 && isUnicodeSpace(c)) {
+        // inside <pre>: not at the start
+        i++;
+        continue;
+      }
       if (pendingSpace) {
         out += ' ';
         pendingSpace = false;
@@ -88,13 +160,16 @@ function stripTags(s: string): string {
     i++;
   }
   if (run >= 0) out += run === 0 ? s : s.slice(run);
-  return out;
+  // right trim (inside <pre> there may be trailing whitespace)
+  let end = out.length;
+  while (end > 0 && isUnicodeSpace(out.charCodeAt(end - 1))) end--;
+  return end === out.length ? out : out.slice(0, end);
 }
 
-/** The visible text of an HTML fragment. */
-export function clearTags(s: string): string {
+/** The visible text of an HTML fragment in one line. */
+export function clearTags(s: string, inPre = false): string {
   if (s === '') return '';
-  const text = stripTags(s);
+  const text = stripTags(s, inPre);
   return text.indexOf('&') >= 0 ? decode(text, false) : text;
 }
 
@@ -109,6 +184,11 @@ export function isText(value: string, expected: string, textOf: () => string): b
     if (c === 60 && isMarkupStart(value, i)) {
       const last = skipMarkup(value, i);
       if (last < 0) break;
+      // <br>, blocks and cells separate words, as in text()
+      if (!prevSpace && separatesWords(value, i)) {
+        pendingSpace = true;
+        prevSpace = true;
+      }
       i = last + 1;
       continue;
     }

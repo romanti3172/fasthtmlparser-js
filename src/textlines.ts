@@ -31,6 +31,15 @@ const lineBreakKinds = (() => {
   return kinds;
 })();
 
+/**
+ * Whether the tag separates words in the one-line text of `text()`, as in jsoup's `text()`: `<br>`, block elements,
+ * p/h1-h6 and table cells. The same tags as the line breaks here.
+ */
+export function separatesWordsTag(tag: number): boolean {
+  const k = lineBreakKinds[tag];
+  return k === breakLine || k === breakParagraph || k === breakSpace;
+}
+
 /** Writes text, collapsing whitespace and turning requested breaks into trimmed lines. */
 class LineWriter {
   out = '';
