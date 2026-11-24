@@ -17,6 +17,8 @@ test('text is one line', () => {
     ['a<span>b</span>c', 'abc'], ['a<my-widget>b</my-widget>', 'ab'], ['a\nb', 'a b'], ['a\r\n\t  b', 'a b'],
     ['a<!-- c -->b', 'ab'], ['<p>a</p><script>x()</script><p>b</p>', 'a b'], ['a &amp; b', 'a & b'],
     ['x<pre>a\n  b</pre>y', 'x a\n  b y'],
+    // whitespace at the end of <pre> is not followed by one more space
+    ['x<pre>a\n</pre> b', 'x a\nb'], ['x<pre>a </pre><p> b</p>', 'x a b'],
   ];
   for (const [html, text] of cases) {
     const doc = parse(`<div>${html}</div>`);

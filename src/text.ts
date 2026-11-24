@@ -151,8 +151,9 @@ function stripTags(s: string, inPre: boolean): string {
         i++;
         continue;
       }
+      // not after whitespace kept as written inside <pre>
       if (pendingSpace) {
-        out += ' ';
+        if (!isUnicodeSpace(out.charCodeAt(out.length - 1))) out += ' ';
         pendingSpace = false;
       }
       run = i;
